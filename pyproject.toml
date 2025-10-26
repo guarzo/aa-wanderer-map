@@ -1,0 +1,79 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "aa-wanderer-map"
+dynamic = ["version", "description"]
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+authors = [
+    { name = "guarzo", email = "guarzo@users.noreply.github.com" },
+]
+maintainers = [
+    { name = "guarzo", email = "guarzo@users.noreply.github.com" },
+]
+classifiers = [
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+]
+dependencies = [
+    "allianceauth>=4",
+    "allianceauth-app-utils>=1.25",
+]
+
+
+[project.urls]
+Homepage = "https://github.com/guarzo/aa-wanderer-map"
+Source = "https://github.com/guarzo/aa-wanderer-map"
+Changelog = "https://github.com/guarzo/aa-wanderer-map/blob/main/CHANGELOG.md"
+Tracker = "https://github.com/guarzo/aa-wanderer-map/issues"
+
+[tool.flit.module]
+name = "wanderer"
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+sections = [
+    "FUTURE",
+    "STDLIB",
+    "THIRDPARTY",
+    "DJANGO",
+    "ALLIANCEAUTH",
+    "FIRSTPARTY",
+    "LOCALFOLDER"
+]
+known_allianceauth = ["allianceauth", "app_utils"]
+known_django = ["django", "django_webtest", "esi", "eveuniverse"]
+
+[tool.pylint.'MASTER']
+ignore-patterns = ["__init__.py", "auth_hooks.py", "apps.py", "admin.py"]
+ignore-paths = ["^.*/tests/.*$", "^.*/migrations/.*$"]
+
+[tool.pylint.'BASIC']
+good-names = ["i", "j", "k", "ex"]
+
+[tool.pylint.'FORMAT']
+max-line-length = 120
+
+[tool.pylint.'MESSAGES CONTROL']
+disable = [
+    "cyclic-import",
+    "fixme",
+    "import-outside-toplevel",
+    "imported-auth-user",
+    "too-few-public-methods",
+]
