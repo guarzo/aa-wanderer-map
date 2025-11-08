@@ -106,10 +106,25 @@ def get_acl_member_ids(wanderer_url: str, acl_id: str, acl_api_key: str) -> list
 
 
 def add_character_to_acl(
-    wanderer_url: str, acl_id: str, acl_api_key: str, character_id: int
+    wanderer_url: str,
+    acl_id: str,
+    acl_api_key: str,
+    character_id: int,
+    role: AccessListRoles = AccessListRoles.MEMBER,
 ):
     """
-    Adds a single character to the ACL with the viewer role
+    Adds a single character to the ACL with specified role.
+
+    Args:
+        wanderer_url: Base URL of the Wanderer instance
+        acl_id: The ACL ID
+        acl_api_key: API key for the ACL
+        character_id: EVE character ID to add
+        role: AccessListRoles enum value (defaults to MEMBER for backwards compatibility)
+
+    Raises:
+        BadAPIKeyError: If the API key is invalid
+        requests.HTTPError: If the API call fails
     """
 
     r = requests.post(
@@ -118,7 +133,7 @@ def add_character_to_acl(
         json={
             "member": {
                 "eve_character_id": str(character_id),
-                "role": "member",
+                "role": role.value,
             }
         },
         timeout=DEFAULT_TIMEOUT,
@@ -202,6 +217,152 @@ def set_character_to_member(
     )
 
     r.raise_for_status()
+
+
+def update_character_role(
+    wanderer_url: str,
+    acl_id: str,
+    acl_api_key: str,
+    character_id: int,
+    role: AccessListRoles,
+) -> None:
+    """
+    Update a character's role on the ACL.
+
+    Args:
+        wanderer_url: Base URL of the Wanderer instance
+        acl_id: The ACL ID
+        acl_api_key: API key for the ACL
+        character_id: EVE character ID to update
+        role: AccessListRoles enum value (ADMIN, MANAGER, MEMBER, etc.)
+
+    Raises:
+        BadAPIKeyError: If the API key is invalid
+        requests.HTTPError: If the API call fails
+    """
+    logger.info(
+        "Updating character %d to role %s on map %s / %s",
+        character_id,
+        role.value,
+        wanderer_url,
+        acl_id,
+    )
+
+    r = requests.put(
+        f"{wanderer_url}/api/acls/{acl_id}/members/{character_id}",
+        headers={"Authorization": f"Bearer {acl_api_key}"},
+        json={"member": {"role": role.value}},
+        timeout=DEFAULT_TIMEOUT,
+    )
+
+    if r.status_code == 401:
+        raise BadAPIKeyError(
+            f"The API key {acl_api_key} returned a 401 when trying to update character role on ACL {wanderer_url} {acl_id}"
+        )
+
+    r.raise_for_status()
+
+
+def get_member_role(
+    wanderer_url: str,
+    acl_id: str,
+    acl_api_key: str,
+    character_id: int,
+) -> AccessListRoles:
+    """
+    Get the current role of a character on the ACL.
+
+    Args:
+        wanderer_url: Base URL of the Wanderer instance
+        acl_id: The ACL ID
+        acl_api_key: API key for the ACL
+        character_id: EVE character ID to query
+
+    Returns:
+        AccessListRoles enum value
+
+    Raises:
+        NotFoundError: If character is not on the ACL
+        BadAPIKeyError: If the API key is invalid
+        requests.HTTPError: If the API call fails
+    """
+    logger.info(
+        "Getting role for character %d on map %s / %s",
+        character_id,
+        wanderer_url,
+        acl_id,
+    )
+
+    r = requests.get(
+        f"{wanderer_url}/api/acls/{acl_id}/members/{character_id}",
+        headers={"Authorization": f"Bearer {acl_api_key}"},
+        timeout=DEFAULT_TIMEOUT,
+    )
+
+    if r.status_code == 404:
+        raise NotFoundError(f"Character {character_id} not found on ACL {acl_id}")
+
+    if r.status_code == 401:
+        raise BadAPIKeyError(
+            f"The API key {acl_api_key} returned a 401 when trying to get character role on ACL {wanderer_url} {acl_id}"
+        )
+
+    r.raise_for_status()
+    data = r.json()
+
+    role_str = data.get("member", {}).get("role", "member")
+    return AccessListRoles(role_str)
+
+
+def get_map_acls(
+    wanderer_url: str,
+    map_slug: str,
+    map_api_key: str,
+) -> list:
+    """
+    Get all ACLs associated with a map.
+
+    Args:
+        wanderer_url: Base URL of the Wanderer instance
+        map_slug: Map identifier/slug
+        map_api_key: API key for the map
+
+    Returns:
+        List of ACL dicts: [{"id": "uuid", "name": "ACL Name", "description": "...",
+                            "owner_eve_id": "...", "inserted_at": "...", "updated_at": "..."}, ...]
+        Note: The api_key field is NOT included in the response for security reasons.
+
+    Raises:
+        BadAPIKeyError: If the API key is invalid (401)
+        requests.HTTPError: If the API call fails
+
+    References:
+        Wanderer API Documentation: https://wanderer.ltd/news/api
+        Endpoint: GET /api/map/acls?slug={map_slug}
+    """
+    logger.info(
+        "Getting ACLs for map %s / %s",
+        wanderer_url,
+        map_slug,
+    )
+
+    r = requests.get(
+        f"{wanderer_url}/api/map/acls",
+        params={"slug": map_slug},
+        headers={"Authorization": f"Bearer {map_api_key}"},
+        timeout=DEFAULT_TIMEOUT,
+    )
+
+    if r.status_code == 401:
+        raise BadAPIKeyError(
+            f"The API key {map_api_key} returned a 401 when trying to get ACLs for map {wanderer_url} {map_slug}"
+        )
+
+    r.raise_for_status()
+
+    data = r.json()
+    # API returns: {"data": [{"id": "...", "name": "...", "description": ..., "owner_eve_id": "...", ...}]}
+    return data.get("data", [])
 
 
 def _get_raw_acl_members(wanderer_url: str, acl_id: str, acl_api_key: str):
