@@ -95,7 +95,7 @@ def remove_user_characters_from_map(
 
 
 @shared_task
-def cleanup_access_list(wanderer_managed_map_id: int):
+def cleanup_access_list(wanderer_managed_map_id: int):  # pylint: disable=too-many-locals
     """
     Cleanup the access list for a Wanderer map.
 
@@ -197,8 +197,10 @@ def cleanup_access_list(wanderer_managed_map_id: int):
                 "Character %d not found on ACL during role sync", character_id
             )
             continue
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             # Log other errors but continue with other characters
+            # Broad exception is intentional - we want to process all characters
+            # even if one encounters an unexpected error
             logger.exception(
                 "Error updating role for character %d",
                 character_id,

@@ -114,7 +114,7 @@ The command queues Celery tasks for role synchronization. Check your logs to see
 
 ### Creating a Wanderer Map
 
-When creating a new Wanderer managed map in Django Admin:
+When creating a new Wanderer-managed map in Django Admin:
 
 1. Navigate to **Django Admin → Wanderer → Wanderer Managed Maps → Add**
 2. Fill in the map details:

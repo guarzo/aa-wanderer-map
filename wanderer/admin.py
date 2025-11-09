@@ -97,7 +97,15 @@ class WandererManagedMapAdmin(admin.ModelAdmin):
 
             if acl_selection == "__CREATE_NEW__":
                 # Create new ACL
-                character_id = request.user.profile.main_character.character_id
+                try:
+                    character_id = request.user.profile.main_character.character_id
+                except (AttributeError, TypeError):
+                    messages.error(
+                        request,
+                        "Cannot create ACL: You must have a main character set."
+                    )
+                    return
+
                 acl_id, acl_key = create_acl_associated_to_map(
                     obj.wanderer_url,
                     obj.map_slug,
