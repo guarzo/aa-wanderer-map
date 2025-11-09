@@ -132,6 +132,16 @@ def cleanup_access_list(
         characters_that_should_be_on_acls_ids_set,
     )
 
+    admin_char_ids = wanderer_managed_map.get_admin_character_ids()
+    manager_char_ids = wanderer_managed_map.get_manager_character_ids()
+
+    def expected_role_for(character_id: int) -> AccessListRoles:
+        if character_id in admin_char_ids:
+            return AccessListRoles.ADMIN
+        if character_id in manager_char_ids:
+            return AccessListRoles.MANAGER
+        return AccessListRoles.MEMBER
+
     # Step 1: Remove unauthorized MEMBER-role characters
     # Note: We only remove unauthorized members; non-member roles are handled in Step 4
     character_ids_to_remove = (
@@ -151,7 +161,7 @@ def cleanup_access_list(
     )
     logger.info("Adding %d character ids to the ACL", len(character_ids_to_add))
     for character_id_to_add in character_ids_to_add:
-        role = wanderer_managed_map.get_character_role(character_id_to_add)
+        role = expected_role_for(character_id_to_add)
         logger.debug(
             "Adding character id %d with role %s", character_id_to_add, role.value
         )
@@ -166,7 +176,7 @@ def cleanup_access_list(
     )
 
     for character_id in existing_authorized_chars:
-        expected_role = wanderer_managed_map.get_character_role(character_id)
+        expected_role = expected_role_for(character_id)
 
         try:
             current_role = get_member_role(
@@ -178,6 +188,12 @@ def cleanup_access_list(
 
             # Only update if role has changed
             if current_role != expected_role:
+                # Preserve manually-set admin/manager roles not managed by Auth
+                if expected_role == AccessListRoles.MEMBER and current_role in {
+                    AccessListRoles.ADMIN,
+                    AccessListRoles.MANAGER,
+                }:
+                    continue
                 logger.info(
                     "Map '%s' (ID:%d): Updating character %d role from %s to %s",
                     wanderer_managed_map.name,
@@ -212,9 +228,6 @@ def cleanup_access_list(
     # Step 4: Handle non-member roles (preserve manually-set admin/manager)
     # This preserves admins/managers NOT managed by Auth
     # We use the non_member_characters we got earlier (stored during initial ACL fetch)
-    admin_char_ids = wanderer_managed_map.get_admin_character_ids()
-    manager_char_ids = wanderer_managed_map.get_manager_character_ids()
-
     for character_id, role in non_member_characters:
         # If they're Auth-managed admin/manager, they were already updated in Step 3
         if character_id in admin_char_ids or character_id in manager_char_ids:
