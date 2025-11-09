@@ -102,30 +102,34 @@ class WandererManagedMap(models.Model):
     admin_users = models.ManyToManyField(
         User,
         blank=True,
-        related_name='wanderer_admin_maps',
-        help_text=_("Users who should be granted admin role on this map's ACL")
+        related_name="wanderer_admin_maps",
+        help_text=_("Users who should be granted admin role on this map's ACL"),
     )
 
     admin_groups = models.ManyToManyField(
         Group,
         blank=True,
-        related_name='wanderer_admin_maps',
-        help_text=_("Groups whose members should be granted admin role on this map's ACL")
+        related_name="wanderer_admin_maps",
+        help_text=_(
+            "Groups whose members should be granted admin role on this map's ACL"
+        ),
     )
 
     # Manager Access - users/groups who should have manager role on the ACL
     manager_users = models.ManyToManyField(
         User,
         blank=True,
-        related_name='wanderer_manager_maps',
-        help_text=_("Users who should be granted manager role on this map's ACL")
+        related_name="wanderer_manager_maps",
+        help_text=_("Users who should be granted manager role on this map's ACL"),
     )
 
     manager_groups = models.ManyToManyField(
         Group,
         blank=True,
-        related_name='wanderer_manager_maps',
-        help_text=_("Groups whose members should be granted manager role on this map's ACL")
+        related_name="wanderer_manager_maps",
+        help_text=_(
+            "Groups whose members should be granted manager role on this map's ACL"
+        ),
     )
 
     def __str__(self):
@@ -138,8 +142,8 @@ class WandererManagedMap(models.Model):
             )
         ]
         indexes = [
-            models.Index(fields=['map_acl_id'], name='wanderer_map_acl_id_idx'),
-            models.Index(fields=['map_slug'], name='wanderer_map_slug_idx'),
+            models.Index(fields=["map_acl_id"], name="wanderer_map_acl_id_idx"),
+            models.Index(fields=["map_slug"], name="wanderer_map_slug_idx"),
         ]
 
     def accessible_by(self, user: User) -> bool:
@@ -250,7 +254,9 @@ class WandererManagedMap(models.Model):
             self.wanderer_url, self.map_acl_id, self.map_acl_api_key
         )
 
-    def add_character_to_acl(self, character_id: int, role: AccessListRoles = AccessListRoles.MEMBER):
+    def add_character_to_acl(
+        self, character_id: int, role: AccessListRoles = AccessListRoles.MEMBER
+    ):
         """Adds a single character to the ACL with specified role (defaults to MEMBER)"""
         return add_character_to_acl(
             self.wanderer_url, self.map_acl_id, self.map_acl_api_key, character_id, role
@@ -300,28 +306,32 @@ class WandererManagedMap(models.Model):
         character_ids = set()
 
         # Add ALL characters from admin_users (main + alts)
-        for user in self.admin_users.prefetch_related('character_ownerships__character').all():
+        for user in self.admin_users.prefetch_related(
+            "character_ownerships__character"
+        ).all():
             user_chars = EveCharacter.objects.filter(
                 character_ownership__user=user
-            ).values_list('character_id', flat=True)
+            ).values_list("character_id", flat=True)
 
             if not user_chars:
                 logger.warning(
                     "User %s (ID: %d) is assigned as admin for map '%s' but has no characters",
                     user.username,
                     user.id,
-                    self.name
+                    self.name,
                 )
                 continue
 
             character_ids.update(user_chars)
 
         # Add ALL characters from admin_groups members (main + alts)
-        for group in self.admin_groups.prefetch_related('user_set__character_ownerships__character').all():
+        for group in self.admin_groups.prefetch_related(
+            "user_set__character_ownerships__character"
+        ).all():
             for user in group.user_set.all():
                 user_chars = EveCharacter.objects.filter(
                     character_ownership__user=user
-                ).values_list('character_id', flat=True)
+                ).values_list("character_id", flat=True)
 
                 if not user_chars:
                     logger.warning(
@@ -329,7 +339,7 @@ class WandererManagedMap(models.Model):
                         user.username,
                         user.id,
                         group.name,
-                        self.name
+                        self.name,
                     )
                     continue
 
@@ -345,28 +355,32 @@ class WandererManagedMap(models.Model):
         character_ids = set()
 
         # Add ALL characters from manager_users (main + alts)
-        for user in self.manager_users.prefetch_related('character_ownerships__character').all():
+        for user in self.manager_users.prefetch_related(
+            "character_ownerships__character"
+        ).all():
             user_chars = EveCharacter.objects.filter(
                 character_ownership__user=user
-            ).values_list('character_id', flat=True)
+            ).values_list("character_id", flat=True)
 
             if not user_chars:
                 logger.warning(
                     "User %s (ID: %d) is assigned as manager for map '%s' but has no characters",
                     user.username,
                     user.id,
-                    self.name
+                    self.name,
                 )
                 continue
 
             character_ids.update(user_chars)
 
         # Add ALL characters from manager_groups members (main + alts)
-        for group in self.manager_groups.prefetch_related('user_set__character_ownerships__character').all():
+        for group in self.manager_groups.prefetch_related(
+            "user_set__character_ownerships__character"
+        ).all():
             for user in group.user_set.all():
                 user_chars = EveCharacter.objects.filter(
                     character_ownership__user=user
-                ).values_list('character_id', flat=True)
+                ).values_list("character_id", flat=True)
 
                 if not user_chars:
                     logger.warning(
@@ -374,7 +388,7 @@ class WandererManagedMap(models.Model):
                         user.username,
                         user.id,
                         group.name,
-                        self.name
+                        self.name,
                     )
                     continue
 

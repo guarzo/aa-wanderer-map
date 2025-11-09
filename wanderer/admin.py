@@ -1,7 +1,6 @@
 """Admin site."""
 
-from django.contrib import admin
-from django.contrib import messages
+from django.contrib import admin, messages
 
 from wanderer.forms import WandererManagedMapAdminForm
 from wanderer.models import WandererAccount, WandererManagedMap
@@ -12,6 +11,7 @@ from wanderer.wanderer import create_acl_associated_to_map
 class WandererManagedMapAdmin(admin.ModelAdmin):
     form = WandererManagedMapAdminForm
     list_display = ("name", "wanderer_url", "map_slug")
+    actions = ['sync_acl_roles']
 
     fieldsets = [
         (None, {"fields": ["name", "wanderer_url", "map_slug", "map_api_key"]}),
@@ -20,7 +20,7 @@ class WandererManagedMapAdmin(admin.ModelAdmin):
             {
                 "fields": ["acl_selection", "existing_acl_api_key"],
                 "description": "Choose to use an existing ACL or create a new one managed by Alliance Auth. "
-                              "If selecting an existing ACL, you must provide its API key from Wanderer.",
+                "If selecting an existing ACL, you must provide its API key from Wanderer.",
             },
         ),
         ("Access List", {"fields": ["map_acl_id", "map_acl_api_key"]}),
@@ -46,7 +46,7 @@ class WandererManagedMapAdmin(admin.ModelAdmin):
                     "admin_groups",
                 ],
                 "description": "Users/groups who should have admin role on the map's ACL. "
-                              "All their characters (main + alts) will be promoted to admin.",
+                "All their characters (main + alts) will be promoted to admin.",
             },
         ),
         (
@@ -57,7 +57,7 @@ class WandererManagedMapAdmin(admin.ModelAdmin):
                     "manager_groups",
                 ],
                 "description": "Users/groups who should have manager role on the map's ACL. "
-                              "All their characters (main + alts) will be promoted to manager.",
+                "All their characters (main + alts) will be promoted to manager.",
             },
         ),
     ]
@@ -93,9 +93,9 @@ class WandererManagedMapAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if not change:  # Only on creation
-            acl_selection = form.cleaned_data.get('acl_selection', '__CREATE_NEW__')
+            acl_selection = form.cleaned_data.get("acl_selection", "__CREATE_NEW__")
 
-            if acl_selection == '__CREATE_NEW__':
+            if acl_selection == "__CREATE_NEW__":
                 # Create new ACL
                 character_id = request.user.profile.main_character.character_id
                 acl_id, acl_key = create_acl_associated_to_map(
@@ -112,7 +112,7 @@ class WandererManagedMapAdmin(admin.ModelAdmin):
                 # Use existing ACL
                 # acl_selection now contains just the ACL ID
                 acl_id = acl_selection
-                acl_key = form.cleaned_data.get('existing_acl_api_key')
+                acl_key = form.cleaned_data.get("existing_acl_api_key")
 
                 obj.map_acl_id = acl_id
                 obj.map_acl_api_key = acl_key
@@ -121,10 +121,27 @@ class WandererManagedMapAdmin(admin.ModelAdmin):
                     request,
                     f"Using existing ACL: {acl_id}. "
                     "Note: Alliance Auth will manage this ACL going forward. "
-                    "Manual changes may be overwritten."
+                    "Manual changes may be overwritten.",
                 )
 
         super().save_model(request, obj, form, change)
+
+    @admin.action(description="Sync ACL roles now (queues cleanup task)")
+    def sync_acl_roles(self, request, queryset):
+        """Admin action to immediately sync ACL roles for selected maps"""
+        from .tasks import cleanup_access_list
+
+        count = queryset.count()
+
+        for wmap in queryset:
+            cleanup_access_list.delay(wmap.pk)
+
+        self.message_user(
+            request,
+            f"Queued role sync for {count} map(s). Tasks are running asynchronously via Celery. "
+            f"Check logs for progress and results.",
+            messages.SUCCESS
+        )
 
 
 @admin.register(WandererAccount)

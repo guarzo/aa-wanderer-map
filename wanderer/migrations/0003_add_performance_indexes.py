@@ -12,10 +12,10 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddIndex(
             model_name="wanderermanagedmap",
-            index=models.Index(fields=['map_acl_id'], name='wanderer_map_acl_id_idx'),
+            index=models.Index(fields=["map_acl_id"], name="wanderer_map_acl_id_idx"),
         ),
         migrations.AddIndex(
             model_name="wanderermanagedmap",
-            index=models.Index(fields=['map_slug'], name='wanderer_map_slug_idx'),
+            index=models.Index(fields=["map_slug"], name="wanderer_map_slug_idx"),
         ),
     ]

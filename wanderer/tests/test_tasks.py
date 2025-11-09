@@ -36,7 +36,9 @@ class TestTasks(TestCase):
         add_alts_to_map(user.id, wanderer_map.id)
 
         WandererManagedMap.get_character_ids_on_access_list.assert_called_once()
-        WandererManagedMap.add_character_to_acl.assert_called_once_with(1003, role=AccessListRoles.MEMBER)
+        WandererManagedMap.add_character_to_acl.assert_called_once_with(
+            1003, role=AccessListRoles.MEMBER
+        )
         WandererAccount.get_all_character_ids.assert_called_once()
 
     def test_remove_user_characters_from_acl(self):
@@ -91,8 +93,10 @@ class TestTasks(TestCase):
         create_wanderer_users(wanderer_map, 2)
 
         # Mock the get_member_role and update_character_role functions to avoid API calls
-        with patch('wanderer.tasks.get_member_role') as mock_get_member_role:
-            with patch('wanderer.tasks.update_character_role') as mock_update_character_role:
+        with patch("wanderer.tasks.get_member_role") as mock_get_member_role:
+            with patch(
+                "wanderer.tasks.update_character_role"
+            ) as mock_update_character_role:
                 # Return matching roles for existing characters so no updates needed
                 mock_get_member_role.return_value = AccessListRoles.MEMBER
 
@@ -100,9 +104,14 @@ class TestTasks(TestCase):
 
                 WandererManagedMap.get_character_ids_on_access_list.assert_called_once()
                 # 1020 should be removed (not in authorized list)
-                WandererManagedMap.remove_member_from_access_list.assert_called_once_with(1020)
+                WandererManagedMap.remove_member_from_access_list.assert_called_once_with(
+                    1020
+                )
                 # 1001 and 1010 should be added (authorized but not on ACL yet)
-                add_character_calls = [call(1001, role=AccessListRoles.MEMBER), call(1010, role=AccessListRoles.MEMBER)]
+                add_character_calls = [
+                    call(1001, role=AccessListRoles.MEMBER),
+                    call(1010, role=AccessListRoles.MEMBER),
+                ]
                 WandererManagedMap.add_character_to_acl.assert_has_calls(
                     add_character_calls, any_order=True
                 )
@@ -127,9 +136,13 @@ class TestTasks(TestCase):
         WandererManagedMap.get_manager_character_ids = MagicMock(return_value={1001})
         WandererManagedMap.get_character_role = MagicMock(
             side_effect=lambda char_id: (
-                AccessListRoles.ADMIN if char_id == 1000
-                else AccessListRoles.MANAGER if char_id == 1001
-                else AccessListRoles.MEMBER
+                AccessListRoles.ADMIN
+                if char_id == 1000
+                else (
+                    AccessListRoles.MANAGER
+                    if char_id == 1001
+                    else AccessListRoles.MEMBER
+                )
             )
         )
         WandererManagedMap.get_non_member_characters = MagicMock(
@@ -142,12 +155,17 @@ class TestTasks(TestCase):
 
         # Import get_member_role to mock it
         from unittest.mock import patch
-        with patch('wanderer.tasks.get_member_role') as mock_get_member_role:
+
+        with patch("wanderer.tasks.get_member_role") as mock_get_member_role:
             # Return current role that matches expected role
             mock_get_member_role.side_effect = lambda url, acl_id, api_key, char_id: (
-                AccessListRoles.ADMIN if char_id == 1000
-                else AccessListRoles.MANAGER if char_id == 1001
-                else AccessListRoles.MEMBER
+                AccessListRoles.ADMIN
+                if char_id == 1000
+                else (
+                    AccessListRoles.MANAGER
+                    if char_id == 1001
+                    else AccessListRoles.MEMBER
+                )
             )
 
             wanderer_map = create_managed_map()

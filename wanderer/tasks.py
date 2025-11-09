@@ -197,12 +197,11 @@ def cleanup_access_list(wanderer_managed_map_id: int):
                 "Character %d not found on ACL during role sync", character_id
             )
             continue
-        except Exception as e:
+        except Exception:
             # Log other errors but continue with other characters
-            logger.error(
-                "Error updating role for character %d: %s",
+            logger.exception(
+                "Error updating role for character %d",
                 character_id,
-                str(e),
             )
             continue
 
