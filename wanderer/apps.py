@@ -13,7 +13,7 @@ class WandererServiceConfig(AppConfig):
     def ready(self):
         """Runs service sync on startup"""
         # needs to be imported after the app is loaded
-        import wanderer.signals  # noqa: F401
+        from . import signals
 
         from .auth_hooks import add_del_callback
 

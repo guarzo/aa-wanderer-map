@@ -102,7 +102,7 @@ class WandererManagedMapAdmin(admin.ModelAdmin):
                 except (AttributeError, TypeError):
                     messages.error(
                         request,
-                        "Cannot create ACL: You must have a main character set."
+                        "Cannot create ACL: You must have a main character set.",
                     )
                     return
 

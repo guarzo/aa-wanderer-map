@@ -95,7 +95,9 @@ def remove_user_characters_from_map(
 
 
 @shared_task
-def cleanup_access_list(wanderer_managed_map_id: int):  # pylint: disable=too-many-locals
+def cleanup_access_list(
+    wanderer_managed_map_id: int,
+):  # pylint: disable=too-many-locals
     """
     Cleanup the access list for a Wanderer map.
 

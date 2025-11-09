@@ -42,7 +42,9 @@ def trigger_cleanup_on_admin_change(_sender, instance, action, **kwargs):
                         "Admin/manager assignment changed for map ID:%s, triggering ACL cleanup",
                         map_id,
                     )
-                    transaction.on_commit(lambda mid=map_id: cleanup_access_list.delay(mid))
+                    transaction.on_commit(
+                        lambda mid=map_id: cleanup_access_list.delay(mid)
+                    )
         else:
             # When reverse=False, instance is the Map
             logger.info(
