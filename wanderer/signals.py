@@ -2,6 +2,7 @@
 
 import logging
 
+from django.db import transaction
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 
@@ -34,4 +35,4 @@ def trigger_cleanup_on_admin_change(sender, instance, action, **kwargs):
             instance.name,
             instance.pk,
         )
-        cleanup_access_list.delay(instance.pk)
+        transaction.on_commit(lambda: cleanup_access_list.delay(instance.pk))

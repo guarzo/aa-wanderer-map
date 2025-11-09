@@ -23,11 +23,9 @@ from wanderer.wanderer import (
     NotFoundError,
     add_character_to_acl,
     get_acl_member_ids,
-    get_member_role,
     get_non_member_characters,
     remove_member_from_access_list,
     set_character_to_member,
-    update_character_role,
 )
 
 logger = get_extension_logger(__name__)
@@ -298,105 +296,81 @@ class WandererManagedMap(models.Model):
             self.wanderer_url, self.map_acl_id, self.map_acl_api_key, character_id
         )
 
-    def get_admin_character_ids(self):
+    def _get_role_character_ids(self, users_qs, groups_qs, role_name: str) -> set[int]:
+        """
+        Helper method to collect character IDs from user and group relationships.
+
+        Args:
+            users_qs: QuerySet or related manager for users assigned the role
+            groups_qs: QuerySet or related manager for groups assigned the role
+            role_name: Name of the role (e.g., 'admin', 'manager') for logging
+
+        Returns:
+            Set of character IDs for all characters owned by assigned users
+        """
+        character_ids = set()
+
+        # Add ALL characters from assigned users (main + alts)
+        for user in users_qs.prefetch_related("character_ownerships__character").all():
+            user_chars = EveCharacter.objects.filter(
+                character_ownership__user=user
+            ).values_list("character_id", flat=True)
+
+            if not user_chars:
+                logger.warning(
+                    "User %s (ID: %d) is assigned as %s for map '%s' but has no characters",
+                    user.username,
+                    user.id,
+                    role_name,
+                    self.name,
+                )
+                continue
+
+            character_ids.update(user_chars)
+
+        # Add ALL characters from assigned groups members (main + alts)
+        for group in groups_qs.prefetch_related(
+            "user_set__character_ownerships__character"
+        ).all():
+            for user in group.user_set.all():
+                user_chars = EveCharacter.objects.filter(
+                    character_ownership__user=user
+                ).values_list("character_id", flat=True)
+
+                if not user_chars:
+                    logger.warning(
+                        "User %s (ID: %d) in %s group '%s' for map '%s' has no characters",
+                        user.username,
+                        user.id,
+                        role_name,
+                        group.name,
+                        self.name,
+                    )
+                    continue
+
+                character_ids.update(user_chars)
+
+        return character_ids
+
+    def get_admin_character_ids(self) -> set[int]:
         """
         Returns set of character IDs that should have admin role.
         Includes ALL characters (main + alts) from admin_users and all users in admin_groups.
         """
-        character_ids = set()
+        return self._get_role_character_ids(
+            self.admin_users, self.admin_groups, "admin"
+        )
 
-        # Add ALL characters from admin_users (main + alts)
-        for user in self.admin_users.prefetch_related(
-            "character_ownerships__character"
-        ).all():
-            user_chars = EveCharacter.objects.filter(
-                character_ownership__user=user
-            ).values_list("character_id", flat=True)
-
-            if not user_chars:
-                logger.warning(
-                    "User %s (ID: %d) is assigned as admin for map '%s' but has no characters",
-                    user.username,
-                    user.id,
-                    self.name,
-                )
-                continue
-
-            character_ids.update(user_chars)
-
-        # Add ALL characters from admin_groups members (main + alts)
-        for group in self.admin_groups.prefetch_related(
-            "user_set__character_ownerships__character"
-        ).all():
-            for user in group.user_set.all():
-                user_chars = EveCharacter.objects.filter(
-                    character_ownership__user=user
-                ).values_list("character_id", flat=True)
-
-                if not user_chars:
-                    logger.warning(
-                        "User %s (ID: %d) in admin group '%s' for map '%s' has no characters",
-                        user.username,
-                        user.id,
-                        group.name,
-                        self.name,
-                    )
-                    continue
-
-                character_ids.update(user_chars)
-
-        return character_ids
-
-    def get_manager_character_ids(self):
+    def get_manager_character_ids(self) -> set[int]:
         """
         Returns set of character IDs that should have manager role.
         Includes ALL characters (main + alts) from manager_users and all users in manager_groups.
         """
-        character_ids = set()
+        return self._get_role_character_ids(
+            self.manager_users, self.manager_groups, "manager"
+        )
 
-        # Add ALL characters from manager_users (main + alts)
-        for user in self.manager_users.prefetch_related(
-            "character_ownerships__character"
-        ).all():
-            user_chars = EveCharacter.objects.filter(
-                character_ownership__user=user
-            ).values_list("character_id", flat=True)
-
-            if not user_chars:
-                logger.warning(
-                    "User %s (ID: %d) is assigned as manager for map '%s' but has no characters",
-                    user.username,
-                    user.id,
-                    self.name,
-                )
-                continue
-
-            character_ids.update(user_chars)
-
-        # Add ALL characters from manager_groups members (main + alts)
-        for group in self.manager_groups.prefetch_related(
-            "user_set__character_ownerships__character"
-        ).all():
-            for user in group.user_set.all():
-                user_chars = EveCharacter.objects.filter(
-                    character_ownership__user=user
-                ).values_list("character_id", flat=True)
-
-                if not user_chars:
-                    logger.warning(
-                        "User %s (ID: %d) in manager group '%s' for map '%s' has no characters",
-                        user.username,
-                        user.id,
-                        group.name,
-                        self.name,
-                    )
-                    continue
-
-                character_ids.update(user_chars)
-
-        return character_ids
-
-    def get_character_role(self, character_id):
+    def get_character_role(self, character_id: int) -> AccessListRoles:
         """
         Determine what role a character should have on the ACL.
         Returns: AccessListRoles enum value (ADMIN, MANAGER, or MEMBER)
@@ -408,10 +382,9 @@ class WandererManagedMap(models.Model):
 
         if character_id in admin_chars:
             return AccessListRoles.ADMIN
-        elif character_id in manager_chars:
+        if character_id in manager_chars:
             return AccessListRoles.MANAGER
-        else:
-            return AccessListRoles.MEMBER
+        return AccessListRoles.MEMBER
 
 
 class WandererAccount(models.Model):

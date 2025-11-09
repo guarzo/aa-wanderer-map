@@ -257,7 +257,8 @@ def update_character_role(
 
     if r.status_code == 401:
         raise BadAPIKeyError(
-            f"The API key {acl_api_key} returned a 401 when trying to update character role on ACL {wanderer_url} {acl_id}"
+            f"The API key {acl_api_key} returned a 401 when trying to "
+            f"update character role on ACL {wanderer_url} {acl_id}"
         )
 
     r.raise_for_status()

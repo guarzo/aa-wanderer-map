@@ -11,7 +11,7 @@ from wanderer.wanderer import create_acl_associated_to_map
 class WandererManagedMapAdmin(admin.ModelAdmin):
     form = WandererManagedMapAdminForm
     list_display = ("name", "wanderer_url", "map_slug")
-    actions = ['sync_acl_roles']
+    actions = ["sync_acl_roles"]
 
     fieldsets = [
         (None, {"fields": ["name", "wanderer_url", "map_slug", "map_api_key"]}),
@@ -140,7 +140,7 @@ class WandererManagedMapAdmin(admin.ModelAdmin):
             request,
             f"Queued role sync for {count} map(s). Tasks are running asynchronously via Celery. "
             f"Check logs for progress and results.",
-            messages.SUCCESS
+            messages.SUCCESS,
         )
 
 

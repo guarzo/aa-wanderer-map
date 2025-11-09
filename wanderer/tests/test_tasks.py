@@ -94,9 +94,7 @@ class TestTasks(TestCase):
 
         # Mock the get_member_role and update_character_role functions to avoid API calls
         with patch("wanderer.tasks.get_member_role") as mock_get_member_role:
-            with patch(
-                "wanderer.tasks.update_character_role"
-            ) as mock_update_character_role:
+            with patch("wanderer.tasks.update_character_role"):
                 # Return matching roles for existing characters so no updates needed
                 mock_get_member_role.return_value = AccessListRoles.MEMBER
 

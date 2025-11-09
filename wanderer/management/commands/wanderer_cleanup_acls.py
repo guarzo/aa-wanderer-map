@@ -15,29 +15,29 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--map-id',
+            "--map-id",
             type=int,
-            help='Sync only this specific map ID (optional)',
+            help="Sync only this specific map ID (optional)",
         )
 
     def handle(self, *args, **options):
-        map_id = options.get('map_id')
+        map_id = options.get("map_id")
 
         if map_id:
             # Sync specific map
             try:
                 wmap = WandererManagedMap.objects.get(pk=map_id)
                 self.stdout.write(
-                    self.style.SUCCESS(f"Syncing roles for map: {wmap.name} (ID:{map_id})")
+                    self.style.SUCCESS(
+                        f"Syncing roles for map: {wmap.name} (ID:{map_id})"
+                    )
                 )
                 cleanup_access_list.delay(wmap.pk)
                 self.stdout.write(
                     self.style.SUCCESS(f"✓ Cleanup task queued for map '{wmap.name}'")
                 )
             except WandererManagedMap.DoesNotExist:
-                self.stdout.write(
-                    self.style.ERROR(f"✗ Map with ID {map_id} not found")
-                )
+                self.stdout.write(self.style.ERROR(f"✗ Map with ID {map_id} not found"))
                 return
         else:
             # Sync all maps

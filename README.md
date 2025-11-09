@@ -96,10 +96,19 @@ The following Django management commands are available:
 |-------------------------|------------------------------------------------------------------------------------------|
 | `wanderer_cleanup_acls` | Manually executes the cleanup task on all managed maps and updates their access lists.  |
 
-Usage:
+### Usage Examples:
+
+**Sync all maps:**
 ```bash
 python manage.py wanderer_cleanup_acls
 ```
+
+**Sync a specific map:**
+```bash
+python manage.py wanderer_cleanup_acls --map-id 5
+```
+
+The command queues Celery tasks for role synchronization. Check your logs to see the progress and results.
 
 ## Usage
 
@@ -139,8 +148,12 @@ To automatically assign users or groups as map admins or managers:
    - **Manager groups**: Add groups whose members should have manager role on the map
 5. Save the map
 6. Role synchronization happens automatically:
-   - The next cleanup cycle (runs hourly) will sync all roles
-   - Or manually trigger with: `python manage.py wanderer_cleanup_acls`
+   - **Immediately**: Changes trigger automatic sync via signal handlers
+   - **Hourly**: Periodic cleanup task ensures consistency
+   - **Manual sync options**:
+     - Use the "Sync ACL roles now" action in the Django admin (select maps → Actions dropdown)
+     - Or run: `python manage.py wanderer_cleanup_acls`
+     - Or sync specific map: `python manage.py wanderer_cleanup_acls --map-id 5`
 
 **Important Notes:**
 - **All characters** (main + alts) for each assigned user receive the admin/manager role, not just their main character
