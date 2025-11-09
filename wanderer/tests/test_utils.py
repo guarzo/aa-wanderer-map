@@ -16,10 +16,10 @@ class TestSanitizeApiKey(TestCase):
 
     def test_sanitize_api_key_full_length(self):
         """Test sanitizing a normal API key"""
-        key = "abc123def456ghi789"
+        key = "key_for_testing_value_12345"
         result = sanitize_api_key(key)
-        self.assertEqual(result, "***i789")
-        self.assertNotIn("abc123", result)
+        self.assertEqual(result, "***2345")
+        self.assertNotIn("key_for_testing_value", result)
 
     def test_sanitize_api_key_short(self):
         """Test sanitizing a short API key"""
@@ -39,9 +39,9 @@ class TestSanitizeApiKey(TestCase):
 
     def test_sanitize_api_key_custom_visible(self):
         """Test custom visible characters"""
-        key = "abc123def456"
+        key = "key_for_testing_visible_foobar"
         result = sanitize_api_key(key, visible_chars=6)
-        self.assertEqual(result, "***def456")
+        self.assertEqual(result, "***foobar")
 
 
 class TestSanitizeUrl(TestCase):

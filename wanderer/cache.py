@@ -54,10 +54,10 @@ class WandererCache:
         members = cache.get(key)
 
         if members is not None:
-            logger.debug(f"Cache HIT for ACL members (map {map_id})")
+            logger.debug("Cache HIT for ACL members (map %s)", map_id)
             return members
 
-        logger.debug(f"Cache MISS for ACL members (map {map_id})")
+        logger.debug("Cache MISS for ACL members (map %s)", map_id)
         members = fetch_func()
         cache.set(key, members, cls.TIMEOUT_ACL_MEMBERS)
         return members
@@ -80,10 +80,10 @@ class WandererCache:
         chars = cache.get(key)
 
         if chars is not None:
-            logger.debug(f"Cache HIT for non-member chars (map {map_id})")
+            logger.debug("Cache HIT for non-member chars (map %s)", map_id)
             return chars
 
-        logger.debug(f"Cache MISS for non-member chars (map {map_id})")
+        logger.debug("Cache MISS for non-member chars (map %s)", map_id)
         chars = fetch_func()
         cache.set(key, chars, cls.TIMEOUT_NON_MEMBER_CHARS)
         return chars
@@ -116,7 +116,7 @@ class WandererCache:
             # User access cache will expire naturally
             pass
 
-        logger.info(f"Invalidated ACL cache for map {map_id}")
+        logger.info("Invalidated ACL cache for map %s", map_id)
 
     @classmethod
     def get_user_access(
@@ -137,10 +137,10 @@ class WandererCache:
         access = cache.get(key)
 
         if access is not None:
-            logger.debug(f"Cache HIT for user access (map {map_id}, user {user_id})")
+            logger.debug("Cache HIT for user access (map %s, user %s)", map_id, user_id)
             return access
 
-        logger.debug(f"Cache MISS for user access (map {map_id}, user {user_id})")
+        logger.debug("Cache MISS for user access (map %s, user %s)", map_id, user_id)
         access = check_func()
         cache.set(key, access, cls.TIMEOUT_USER_ACCESS)
         return access
@@ -156,7 +156,7 @@ class WandererCache:
         """
         key = cls.get_user_access_key(map_id, user_id)
         cache.delete(key)
-        logger.debug(f"Invalidated user access cache (map {map_id}, user {user_id})")
+        logger.debug("Invalidated user access cache (map %s, user %s)", map_id, user_id)
 
     @classmethod
     def clear_all(cls) -> None:
@@ -166,4 +166,8 @@ class WandererCache:
             logger.warning("Cleared ALL Wanderer caches")
         except AttributeError:
             # Fallback: clear the entire cache (not recommended for production)
-            logger.warning("Cache backend doesn't support pattern deletion")
+            cache.clear()
+            logger.warning(
+                "Cache backend doesn't support pattern deletion; "
+                "cleared ENTIRE cache (not just Wanderer keys) to remove stale data"
+            )

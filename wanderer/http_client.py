@@ -73,17 +73,17 @@ class WandererHTTPClient:
         timeout = timeout or cls.DEFAULT_TIMEOUT
         session = cls.get_session()
 
-        logger.debug(f"POST {url} (timeout: {timeout}s)")
+        logger.debug("POST %s (timeout: %ss)", url, timeout)
 
         try:
             response = session.post(url, timeout=timeout, **kwargs)
-            logger.debug(f"POST {url} -> {response.status_code}")
+            logger.debug("POST %s -> %s", url, response.status_code)
             return response
         except requests.Timeout:
-            logger.error(f"POST {url} timed out after {timeout}s")
+            logger.error("POST %s timed out after %ss", url, timeout)
             raise
         except requests.RequestException as e:
-            logger.error(f"POST {url} failed: {e}")
+            logger.error("POST %s failed: %s", url, e)
             raise
 
     @classmethod
@@ -102,17 +102,17 @@ class WandererHTTPClient:
         timeout = timeout or cls.DEFAULT_TIMEOUT
         session = cls.get_session()
 
-        logger.debug(f"GET {url} (timeout: {timeout}s)")
+        logger.debug("GET %s (timeout: %ss)", url, timeout)
 
         try:
             response = session.get(url, timeout=timeout, **kwargs)
-            logger.debug(f"GET {url} -> {response.status_code}")
+            logger.debug("GET %s -> %s", url, response.status_code)
             return response
         except requests.Timeout:
-            logger.error(f"GET {url} timed out after {timeout}s")
+            logger.error("GET %s timed out after %ss", url, timeout)
             raise
         except requests.RequestException as e:
-            logger.error(f"GET {url} failed: {e}")
+            logger.error("GET %s failed: %s", url, e)
             raise
 
     @classmethod
@@ -131,17 +131,17 @@ class WandererHTTPClient:
         timeout = timeout or cls.DEFAULT_TIMEOUT
         session = cls.get_session()
 
-        logger.debug(f"PUT {url} (timeout: {timeout}s)")
+        logger.debug("PUT %s (timeout: %ss)", url, timeout)
 
         try:
             response = session.put(url, timeout=timeout, **kwargs)
-            logger.debug(f"PUT {url} -> {response.status_code}")
+            logger.debug("PUT %s -> %s", url, response.status_code)
             return response
         except requests.Timeout:
-            logger.error(f"PUT {url} timed out after {timeout}s")
+            logger.error("PUT %s timed out after %ss", url, timeout)
             raise
         except requests.RequestException as e:
-            logger.error(f"PUT {url} failed: {e}")
+            logger.error("PUT %s failed: %s", url, e)
             raise
 
     @classmethod
@@ -160,15 +160,15 @@ class WandererHTTPClient:
         timeout = timeout or cls.DEFAULT_TIMEOUT
         session = cls.get_session()
 
-        logger.debug(f"DELETE {url} (timeout: {timeout}s)")
+        logger.debug("DELETE %s (timeout: %ss)", url, timeout)
 
         try:
             response = session.delete(url, timeout=timeout, **kwargs)
-            logger.debug(f"DELETE {url} -> {response.status_code}")
+            logger.debug("DELETE %s -> %s", url, response.status_code)
             return response
         except requests.Timeout:
-            logger.error(f"DELETE {url} timed out after {timeout}s")
+            logger.error("DELETE %s timed out after %ss", url, timeout)
             raise
         except requests.RequestException as e:
-            logger.error(f"DELETE {url} failed: {e}")
+            logger.error("DELETE %s failed: %s", url, e)
             raise

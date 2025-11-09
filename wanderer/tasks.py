@@ -196,12 +196,6 @@ def cleanup_access_list(
 
             # Only update if role has changed
             if current_role != expected_role:
-                # Preserve manually-set admin/manager roles not managed by Auth
-                if expected_role == AccessListRoles.MEMBER and current_role in {
-                    AccessListRoles.ADMIN,
-                    AccessListRoles.MANAGER,
-                }:
-                    continue
                 logger.info(
                     "Map '%s' (ID:%d): Updating character %d role from %s to %s",
                     wanderer_managed_map.name,

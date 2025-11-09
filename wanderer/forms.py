@@ -45,16 +45,17 @@ class WandererManagedMapAdminForm(forms.ModelForm):
         # Only show ACL selection on creation (not edit)
         if not self.instance.pk:
             # Try to fetch existing ACLs if we have the required fields
+            data = self.data if self.is_bound else (self.initial or {})
             if (
-                self.data.get("wanderer_url")
-                and self.data.get("map_slug")
-                and self.data.get("map_api_key")
+                data.get("wanderer_url")
+                and data.get("map_slug")
+                and data.get("map_api_key")
             ):
                 try:
                     acls = get_map_acls(
-                        self.data["wanderer_url"],
-                        self.data["map_slug"],
-                        self.data["map_api_key"],
+                        data["wanderer_url"],
+                        data["map_slug"],
+                        data["map_api_key"],
                     )
 
                     choices = [

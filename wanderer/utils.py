@@ -98,7 +98,7 @@ class WandererURLValidator:
         try:
             parsed = urlparse(url)
         except Exception as e:
-            raise ValidationError(f"Invalid URL format: {e}")
+            raise ValidationError(f"Invalid URL format: {e}") from e
 
         # Check scheme
         if parsed.scheme not in ("http", "https"):

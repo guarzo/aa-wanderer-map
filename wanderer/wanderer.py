@@ -64,7 +64,6 @@ def create_acl_associated_to_map(
     )
 
     logger.debug("Received status code %d", r.status_code)
-    logger.debug(r.text)
 
     if (
         r.status_code == 400
@@ -83,9 +82,16 @@ def create_acl_associated_to_map(
 
     r.raise_for_status()
 
-    acl_id = r.json()["data"]["id"]
-    acl_key = r.json()["data"]["api_key"]
-    logger.info("Successfully created ACL id %s")
+    payload = r.json()
+    acl_data = payload["data"]
+    acl_id = acl_data["id"]
+    acl_key = acl_data["api_key"]
+    logger.debug(
+        "Successfully created ACL id %s (api_key=%s)",
+        acl_id,
+        sanitize_api_key(acl_key),
+    )
+    logger.info("Successfully created ACL id %s", acl_id)
 
     return acl_id, acl_key
 
@@ -227,6 +233,12 @@ def set_character_to_member(
             }
         },
     )
+
+    if r.status_code == 401:
+        raise BadAPIKeyError(
+            f"Invalid ACL API key (ending in {sanitize_api_key(acl_api_key)}) "
+            f"when setting character {character_id} to member on ACL {acl_id}"
+        )
 
     r.raise_for_status()
 
