@@ -22,7 +22,7 @@ _REVERSE_ACCESSORS = {
 @receiver(m2m_changed, sender=WandererManagedMap.admin_groups.through)
 @receiver(m2m_changed, sender=WandererManagedMap.manager_users.through)
 @receiver(m2m_changed, sender=WandererManagedMap.manager_groups.through)
-def trigger_cleanup_on_admin_change(_sender, instance, action, **kwargs):
+def trigger_cleanup_on_admin_change(sender, instance, action, **kwargs):
     """
     When admin/manager assignments change, trigger ACL cleanup to sync roles.
 
@@ -37,10 +37,10 @@ def trigger_cleanup_on_admin_change(_sender, instance, action, **kwargs):
     is_reverse = kwargs.get("reverse", False)
 
     if action == "pre_clear" and is_reverse:
-        accessor = _REVERSE_ACCESSORS.get(_sender)
+        accessor = _REVERSE_ACCESSORS.get(sender)
         if accessor:
             pending = getattr(instance, "_wanderer_pending_acl_maps", None) or {}
-            pending[_sender] = list(
+            pending[sender] = list(
                 getattr(instance, accessor).values_list("pk", flat=True)
             )
             setattr(instance, "_wanderer_pending_acl_maps", pending)
@@ -55,7 +55,7 @@ def trigger_cleanup_on_admin_change(_sender, instance, action, **kwargs):
             pk_set = kwargs.get("pk_set")
             if not pk_set:
                 pending = getattr(instance, "_wanderer_pending_acl_maps", None) or {}
-                pk_set = pending.pop(_sender, [])
+                pk_set = pending.pop(sender, [])
                 if pending:
                     setattr(instance, "_wanderer_pending_acl_maps", pending)
                 elif hasattr(instance, "_wanderer_pending_acl_maps"):

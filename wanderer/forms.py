@@ -8,6 +8,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from wanderer.models import WandererManagedMap
+from wanderer.utils import validate_wanderer_url
 from wanderer.wanderer import BadAPIKeyError, get_map_acls
 
 logger = logging.getLogger(__name__)
@@ -94,6 +95,16 @@ class WandererManagedMapAdminForm(forms.ModelForm):
             # Editing existing map - remove ACL selection fields
             del self.fields["acl_selection"]
             del self.fields["existing_acl_api_key"]
+
+    def clean_wanderer_url(self):
+        """Validate and normalize wanderer_url"""
+        url = self.cleaned_data.get("wanderer_url")
+        if url:
+            try:
+                url = validate_wanderer_url(url)
+            except ValidationError as e:
+                raise forms.ValidationError(str(e))
+        return url
 
     def clean(self):
         cleaned_data = super().clean()

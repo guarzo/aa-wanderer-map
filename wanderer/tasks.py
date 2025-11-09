@@ -58,6 +58,10 @@ def add_alts_to_map(wanderer_user_id: int, wanderer_managed_map_id: int):
         # Add with the determined role
         wanderer_managed_map.add_character_to_acl(missing_character_id, role=role)
 
+    # Invalidate cache after modifications
+    wanderer_managed_map.invalidate_acl_cache()
+    logger.info("Invalidated ACL cache after adding characters")
+
 
 @shared_task
 def remove_user_characters_from_map(
@@ -92,6 +96,10 @@ def remove_user_characters_from_map(
             wanderer_managed_map,
         )
         wanderer_managed_map.remove_member_from_access_list(character_id_to_remove)
+
+    # Invalidate cache after modifications
+    wanderer_managed_map.invalidate_acl_cache()
+    logger.info("Invalidated ACL cache after removing characters")
 
 
 @shared_task
@@ -242,6 +250,10 @@ def cleanup_access_list(
                 role.value,
             )
             wanderer_managed_map.set_character_to_member(character_id)
+
+    # Invalidate cache after cleanup
+    wanderer_managed_map.invalidate_acl_cache()
+    logger.info("Invalidated ACL cache after cleanup")
 
 
 @shared_task
