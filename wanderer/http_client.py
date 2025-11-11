@@ -58,7 +58,7 @@ class WandererHTTPClient:
         return session
 
     @classmethod
-    def post(cls, url: str, timeout: int = None, **kwargs) -> requests.Response:
+    def post(cls, url: str, timeout: int | None = None, **kwargs) -> requests.Response:
         """
         POST request with retry logic.
 
@@ -77,17 +77,18 @@ class WandererHTTPClient:
 
         try:
             response = session.post(url, timeout=timeout, **kwargs)
-            logger.debug("POST %s -> %s", url, response.status_code)
-            return response
         except requests.Timeout:
-            logger.error("POST %s timed out after %ss", url, timeout)
+            logger.exception("POST %s timed out after %ss", url, timeout)
             raise
         except requests.RequestException as e:
-            logger.error("POST %s failed: %s", url, e)
+            logger.exception("POST %s failed: %s", url, e)
             raise
+        else:
+            logger.debug("POST %s -> %s", url, response.status_code)
+            return response
 
     @classmethod
-    def get(cls, url: str, timeout: int = None, **kwargs) -> requests.Response:
+    def get(cls, url: str, timeout: int | None = None, **kwargs) -> requests.Response:
         """
         GET request with retry logic.
 
@@ -106,17 +107,18 @@ class WandererHTTPClient:
 
         try:
             response = session.get(url, timeout=timeout, **kwargs)
-            logger.debug("GET %s -> %s", url, response.status_code)
-            return response
         except requests.Timeout:
-            logger.error("GET %s timed out after %ss", url, timeout)
+            logger.exception("GET %s timed out after %ss", url, timeout)
             raise
         except requests.RequestException as e:
-            logger.error("GET %s failed: %s", url, e)
+            logger.exception("GET %s failed: %s", url, e)
             raise
+        else:
+            logger.debug("GET %s -> %s", url, response.status_code)
+            return response
 
     @classmethod
-    def put(cls, url: str, timeout: int = None, **kwargs) -> requests.Response:
+    def put(cls, url: str, timeout: int | None = None, **kwargs) -> requests.Response:
         """
         PUT request with retry logic.
 
@@ -135,17 +137,20 @@ class WandererHTTPClient:
 
         try:
             response = session.put(url, timeout=timeout, **kwargs)
-            logger.debug("PUT %s -> %s", url, response.status_code)
-            return response
         except requests.Timeout:
-            logger.error("PUT %s timed out after %ss", url, timeout)
+            logger.exception("PUT %s timed out after %ss", url, timeout)
             raise
         except requests.RequestException as e:
-            logger.error("PUT %s failed: %s", url, e)
+            logger.exception("PUT %s failed: %s", url, e)
             raise
+        else:
+            logger.debug("PUT %s -> %s", url, response.status_code)
+            return response
 
     @classmethod
-    def delete(cls, url: str, timeout: int = None, **kwargs) -> requests.Response:
+    def delete(
+        cls, url: str, timeout: int | None = None, **kwargs
+    ) -> requests.Response:
         """
         DELETE request with retry logic.
 
@@ -164,11 +169,12 @@ class WandererHTTPClient:
 
         try:
             response = session.delete(url, timeout=timeout, **kwargs)
-            logger.debug("DELETE %s -> %s", url, response.status_code)
-            return response
         except requests.Timeout:
-            logger.error("DELETE %s timed out after %ss", url, timeout)
+            logger.exception("DELETE %s timed out after %ss", url, timeout)
             raise
         except requests.RequestException as e:
-            logger.error("DELETE %s failed: %s", url, e)
+            logger.exception("DELETE %s failed: %s", url, e)
             raise
+        else:
+            logger.debug("DELETE %s -> %s", url, response.status_code)
+            return response

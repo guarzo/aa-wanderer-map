@@ -61,6 +61,62 @@ class TestSanitizeUrl(TestCase):
         self.assertNotIn("user", result)
         self.assertNotIn("pass", result)
 
+    def test_sanitize_url_with_port(self):
+        """Test URL with port is preserved"""
+        url = "https://wanderer.example.com:8080/api"
+        result = sanitize_url(url)
+        self.assertEqual(result, url)
+
+    def test_sanitize_url_with_port_and_credentials(self):
+        """Test URL with port and credentials - port is preserved"""
+        url = "https://user:pass@wanderer.example.com:8080/api"
+        result = sanitize_url(url)
+        self.assertEqual(result, "https://wanderer.example.com:8080/api")
+        self.assertNotIn("user", result)
+        self.assertNotIn("pass", result)
+        self.assertIn(":8080", result)
+
+    def test_sanitize_url_ipv6(self):
+        """Test IPv6 URL preserves brackets"""
+        url = "https://[::1]/api"
+        result = sanitize_url(url)
+        self.assertEqual(result, url)
+        self.assertIn("[::1]", result)
+
+    def test_sanitize_url_ipv6_with_credentials(self):
+        """Test IPv6 URL with credentials preserves brackets"""
+        url = "https://user:pass@[::1]/api"
+        result = sanitize_url(url)
+        self.assertEqual(result, "https://[::1]/api")
+        self.assertNotIn("user", result)
+        self.assertNotIn("pass", result)
+        self.assertIn("[::1]", result)
+
+    def test_sanitize_url_ipv6_with_port(self):
+        """Test IPv6 URL with port preserves brackets and port"""
+        url = "https://[::1]:8080/api"
+        result = sanitize_url(url)
+        self.assertEqual(result, url)
+        self.assertIn("[::1]:8080", result)
+
+    def test_sanitize_url_ipv6_with_port_and_credentials(self):
+        """Test IPv6 URL with port and credentials preserves brackets and port"""
+        url = "https://user:pass@[::1]:8080/api"
+        result = sanitize_url(url)
+        self.assertEqual(result, "https://[::1]:8080/api")
+        self.assertNotIn("user", result)
+        self.assertNotIn("pass", result)
+        self.assertIn("[::1]:8080", result)
+
+    def test_sanitize_url_ipv6_full_address(self):
+        """Test full IPv6 address with credentials"""
+        url = "https://user:pass@[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:8080/api"
+        result = sanitize_url(url)
+        expected = "https://[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:8080/api"
+        self.assertEqual(result, expected)
+        self.assertNotIn("user", result)
+        self.assertNotIn("pass", result)
+
 
 class TestWandererURLValidator(TestCase):
     """Tests for WandererURLValidator class."""

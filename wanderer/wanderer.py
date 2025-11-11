@@ -97,6 +97,19 @@ def create_acl_associated_to_map(
         ) from e
 
     # Validate response structure
+    if not isinstance(payload, dict):
+        logger.error(
+            "Wanderer API returned non-dict JSON payload. "
+            "Status: %d, Type: %s, Response: %s",
+            r.status_code,
+            type(payload).__name__,
+            str(r.text[:500]),  # Limit response length for logging
+        )
+        raise ValueError(
+            f"Wanderer API returned unexpected JSON type (status {r.status_code}): "
+            f"expected dict, got {type(payload).__name__}"
+        )
+
     acl_data = payload.get("data")
     if not isinstance(acl_data, dict):
         logger.error(
@@ -114,16 +127,28 @@ def create_acl_associated_to_map(
     acl_key = acl_data.get("api_key")
 
     if not acl_id:
+        # Create sanitized copy for logging (don't leak api_key in logs)
+        sanitized_acl_data = acl_data.copy()
+        if "api_key" in sanitized_acl_data:
+            sanitized_acl_data["api_key"] = sanitize_api_key(
+                sanitized_acl_data["api_key"]
+            )
         logger.error(
             "Wanderer API response missing ACL 'id'. Response data: %s",
-            acl_data,
+            sanitized_acl_data,
         )
         raise ValueError("Wanderer API response missing ACL 'id' field")
 
     if not acl_key:
+        # Create sanitized copy for logging (don't leak api_key in logs)
+        sanitized_acl_data = acl_data.copy()
+        if "api_key" in sanitized_acl_data:
+            sanitized_acl_data["api_key"] = sanitize_api_key(
+                sanitized_acl_data["api_key"]
+            )
         logger.error(
             "Wanderer API response missing ACL 'api_key'. Response data: %s",
-            acl_data,
+            sanitized_acl_data,
         )
         raise ValueError("Wanderer API response missing ACL 'api_key' field")
 

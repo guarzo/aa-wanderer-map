@@ -46,10 +46,12 @@ def sanitize_url(url: str) -> str:
     """
     parsed = urlparse(url)
     if parsed.username or parsed.password:
-        # Remove credentials
-        netloc = parsed.hostname
-        if parsed.port:
-            netloc = f"{netloc}:{parsed.port}"
+        # Remove credentials by taking everything after the first '@'
+        # This preserves IPv6 brackets and ports
+        if "@" in parsed.netloc:
+            netloc = parsed.netloc.split("@", 1)[1]
+        else:
+            netloc = parsed.netloc
         parsed = parsed._replace(netloc=netloc)
 
     return urlunparse(parsed)
