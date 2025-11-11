@@ -80,8 +80,8 @@ class WandererHTTPClient:
         except requests.Timeout:
             logger.exception("POST %s timed out after %ss", url, timeout)
             raise
-        except requests.RequestException as e:
-            logger.exception("POST %s failed: %s", url, e)
+        except requests.RequestException:
+            logger.exception("POST %s failed", url)
             raise
 
         logger.debug("POST %s -> %s", url, response.status_code)
@@ -110,8 +110,8 @@ class WandererHTTPClient:
         except requests.Timeout:
             logger.exception("GET %s timed out after %ss", url, timeout)
             raise
-        except requests.RequestException as e:
-            logger.exception("GET %s failed: %s", url, e)
+        except requests.RequestException:
+            logger.exception("GET %s failed", url)
             raise
 
         logger.debug("GET %s -> %s", url, response.status_code)
@@ -140,8 +140,8 @@ class WandererHTTPClient:
         except requests.Timeout:
             logger.exception("PUT %s timed out after %ss", url, timeout)
             raise
-        except requests.RequestException as e:
-            logger.exception("PUT %s failed: %s", url, e)
+        except requests.RequestException:
+            logger.exception("PUT %s failed", url)
             raise
 
         logger.debug("PUT %s -> %s", url, response.status_code)
@@ -172,8 +172,8 @@ class WandererHTTPClient:
         except requests.Timeout:
             logger.exception("DELETE %s timed out after %ss", url, timeout)
             raise
-        except requests.RequestException as e:
-            logger.exception("DELETE %s failed: %s", url, e)
+        except requests.RequestException:
+            logger.exception("DELETE %s failed", url)
             raise
 
         logger.debug("DELETE %s -> %s", url, response.status_code)
