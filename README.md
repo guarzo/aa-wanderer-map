@@ -5,50 +5,66 @@
 [![Django Version](https://img.shields.io/badge/django-4.2-blue)](https://www.djangoproject.com/)
 [![License](https://img.shields.io/github/license/guarzo/aa-wanderer-map)](https://github.com/guarzo/aa-wanderer-map/blob/main/LICENSE)
 
-[Alliance Auth](https://gitlab.com/allianceauth/allianceauth) application linking your auth with a [wanderer](https://wanderer.ltd/) instance.
+An [Alliance Auth](https://gitlab.com/allianceauth/allianceauth) plugin that integrates your Alliance Auth installation with [Wanderer](https://wanderer.ltd/) wormhole mapping service, providing automated access control list (ACL) management.
 
-This is a maintained fork of the [original aa-wanderer](https://gitlab.com/r0kym/aa-wanderer) by T'rahk Rokym, which includes bug fixes and improvements.
+This is a maintained fork of the [original aa-wanderer](https://gitlab.com/r0kym/aa-wanderer) by T'rahk Rokym, featuring bug fixes, improvements, and ongoing maintenance.
+
+## Features
+
+- Automated access control list (ACL) management for Wanderer maps
+- Granular permission system based on Alliance Auth states, groups, characters, corporations, alliances, and factions
+- Automatic synchronization of user characters with Wanderer map access
+- Support for multiple Wanderer instances and maps
+- Periodic cleanup tasks to maintain ACL integrity
+- Preserves admin and manager roles on the managed ACL
 
 ## Recent Updates
 
+**v0.1.6** - Enhanced ACL management to allow usage of existing ACL, and control of admin/manager
+
 **v0.1.5** - Fixed migration errors and improved database table initialization handling
 
-Credit to:
-- T'rahk Rokym for the original aa-wanderer implementation
-- A-A-Ron for his work on [allianceauth-multiverse](https://github.com/Solar-Helix-Independent-Transport/allianceauth-discord-multiverse) without which multiple services wouldn't have been possible
+## Credits
 
-## Planned features
-- [ ] Wanderer ACL management through the auth
+- **T'rahk Rokym** - Original aa-wanderer implementation
+- **A-A-Ron** - [allianceauth-multiverse](https://github.com/Solar-Helix-Independent-Transport/allianceauth-discord-multiverse) architecture that enabled multiple service support
 
-## Usage
-Currently, I recommend keeping a normal wanderer access list on your map that you configure yourself.
-You can add your corporation/alliance on this access list to make sure that all mains can easily open your map.
-It also allows you to add another group if needed during a joint op. \
-The application will create another access list that will be fully managed and shouldn't be manually edited.
-The only thing you can change on that access list is moving some characters to admin or manager to keep an overview.
-But even these admin/manager characters will be removed from the access list if they lose access to the service.
+## How It Works
+
+aa-wanderer-map creates and manages a dedicated access list on your Wanderer map, separate from any manually configured access lists. This managed ACL is automatically synchronized with your Alliance Auth permissions.
+
+**Notes:**
+- The managed ACL created by aa-wanderer-map should not be manually edited
+- Users who lose Alliance Auth permissions will be automatically removed from the managed ACL, regardless of their role
 
 ## Installation
 
-### Step 1 - Check prerequisites
+### Step 1 - Check Prerequisites
 
-1. aa-wanderer is a plugin for Alliance Auth. If you don't have Alliance Auth running already, please install it first before proceeding. (see the official [AA installation guide](https://allianceauth.readthedocs.io/en/latest/installation/auth/allianceauth/) for details)
-2. You need to have a map with administrator access on wanderer to recover the map API key that will be used to create a new access list.
+1. **Alliance Auth Installation** - This plugin requires a working Alliance Auth installation. If you haven't installed Alliance Auth yet, please follow the official [Alliance Auth installation guide](https://allianceauth.readthedocs.io/en/latest/installation/auth/allianceauth/).
+2. **Wanderer Map Administrator Access** - You must have administrator access to a Wanderer map to obtain the map API key required for creating the managed access list.
 
-### Step 2 - Install app
+### Step 2 - Install Application
 
-Make sure you are in the virtual environment (venv) of your Alliance Auth installation. Then install the newest release from PyPI:
+Ensure you are in the virtual environment of your Alliance Auth installation, then install the latest release from PyPI:
 
 ```bash
 pip install aa-wanderer-map
 ```
 
-### Step 3 - Configure Auth settings
+### Step 3 - Configure Settings
 
-Configure your Auth settings (`local.py`) as follows:
+Add the following configuration to your Alliance Auth settings file (`local.py`):
 
-- Add `'wanderer'` to `INSTALLED_APPS`
-- Add below lines to your settings file:
+1. Add `'wanderer'` to `INSTALLED_APPS`:
+
+```python
+INSTALLED_APPS += [
+    'wanderer',
+]
+```
+
+2. Configure the periodic cleanup task:
 
 ```python
 CELERYBEAT_SCHEDULE['wanderer_cleanup_access_lists'] = {
@@ -57,33 +73,101 @@ CELERYBEAT_SCHEDULE['wanderer_cleanup_access_lists'] = {
 }
 ```
 
-### Step 4 - Finalize App installation
+### Step 4 - Finalize Installation
 
-Run migrations & copy static files
+Run migrations and collect static files:
 
 ```bash
 python manage.py migrate
 python manage.py collectstatic --noinput
 ```
 
-Restart your supervisor services for Auth.
+Restart your Alliance Auth supervisor services:
 
+```bash
+supervisorctl restart myauth:
+```
 
-### Commands
+## Management Commands
 
-The following commands can be used when running the module:
+The following Django management commands are available:
 
-| Name                    | Description                                                                              |
+| Command                 | Description                                                                              |
 |-------------------------|------------------------------------------------------------------------------------------|
-| `wanderer_cleanup_acls` | Will execute the cleanup command on all your managed maps and update their access lists. |
+| `wanderer_cleanup_acls` | Manually executes the cleanup task on all managed maps and updates their access lists.  |
+
+### Usage Examples:
+
+**Sync all maps:**
+```bash
+python manage.py wanderer_cleanup_acls
+```
+
+**Sync a specific map:**
+```bash
+python manage.py wanderer_cleanup_acls --map-id 5
+```
+
+The command queues Celery tasks for role synchronization. Check your logs to see the progress and results.
+
+## Usage
+
+### Creating a Wanderer Map
+
+When creating a new Wanderer-managed map in Django Admin:
+
+1. Navigate to **Django Admin → Wanderer → Wanderer Managed Maps → Add**
+2. Fill in the map details:
+   - **Name**: A descriptive name for the map
+   - **Wanderer URL**: The base URL of your Wanderer instance (e.g., `https://wanderer.ltd`)
+   - **Map slug**: The unique identifier for the map in Wanderer
+   - **Map API key**: The API key for the map (with admin permissions)
+3. In the **Access List Selection** section:
+   - **Create new ACL**: Alliance Auth creates a fresh ACL for this map (recommended)
+   - **Use existing**: Select from existing ACLs already on the map in Wanderer
+4. Configure **Member Access** permissions:
+   - Choose which states, groups, characters, corporations, alliances, or factions can access the map
+   - Users matching these criteria will be able to link their account and access the map as members
+5. Save the map
+
+**Important Notes:**
+- If you select an existing ACL, Alliance Auth will manage it going forward. Manual changes to the ACL may be overwritten during cleanup.
+- Each map creates a dynamic service in Alliance Auth that users can link to
+
+### Assigning Map Admins and Managers
+
+To automatically assign users or groups as map admins or managers:
+
+1. Navigate to **Django Admin → Wanderer → Wanderer Managed Maps**
+2. Select and edit the map you want to configure
+3. In the **Admin Roles** section:
+   - **Admin users**: Add individual users who should have admin role on the map
+   - **Admin groups**: Add groups whose members should have admin role on the map
+4. In the **Manager Roles** section:
+   - **Manager users**: Add individual users who should have manager role on the map
+   - **Manager groups**: Add groups whose members should have manager role on the map
+5. Save the map
+6. Role synchronization happens automatically:
+   - **Immediately**: Changes trigger automatic sync via signal handlers
+   - **Hourly**: Periodic cleanup task ensures consistency
+   - **Manual sync options**:
+     - Use the "Sync ACL roles now" action in the Django admin (select maps → Actions dropdown)
+     - Or run: `python manage.py wanderer_cleanup_acls`
+     - Or sync specific map: `python manage.py wanderer_cleanup_acls --map-id 5`
+
+**Important Notes:**
+- **All characters** (main + alts) for each assigned user receive the admin/manager role, not just their main character
+- Role priority: ADMIN > MANAGER > MEMBER (if a user is in multiple categories, they get the highest role)
+- Manually-set admin/manager roles (not managed by Auth) are preserved during cleanup, as long as the character is authorized to access the map
+- Users must still have access permissions (configured in Member Access) to be on the ACL
 
 ---
 
-## Development
+## Contributing
 
 ### Development Setup
 
-If you want to contribute to this project or test it locally, follow these steps:
+To contribute to this project or test it locally, follow these steps:
 
 #### 1. Install System Dependencies
 
@@ -192,18 +276,18 @@ python -m build
 ls -la dist/
 ```
 
-### Contributing
+### Contribution Guidelines
 
-Contributions are welcome! Please:
+Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
 3. Make your changes
 4. Format your code: `black . && isort .`
-5. Run tests: `tox`
-6. Commit your changes (`git commit -m 'Add amazing feature'`)
-7. Push to the branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
+5. Run the test suite: `tox`
+6. Commit your changes with a descriptive message
+7. Push to your branch: `git push origin feature/your-feature-name`
+8. Open a Pull Request with a clear description of your changes
 
 ### Troubleshooting
 
@@ -257,15 +341,27 @@ git add .
 git commit -m "Fix formatting"
 ```
 
+## Support
+
 ### Reporting Issues
 
 Please report issues on the [GitHub issue tracker](https://github.com/guarzo/aa-wanderer-map/issues).
 
-Include:
-- Steps to reproduce
+When reporting an issue, please include:
+- Steps to reproduce the issue
 - Expected behavior
 - Actual behavior
-- Your Python version
-- Your Alliance Auth version
-- Any relevant error messages
-- Your operating system and version
+- Python version
+- Alliance Auth version
+- Relevant error messages or logs
+- Operating system and version
+
+### Getting Help
+
+For questions and support:
+- Open an issue on GitHub with the `question` label
+- Check existing issues for similar questions or problems
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

@@ -17,7 +17,9 @@ from allianceauth.eveonline.models import (
 from allianceauth.framework.api.user import get_all_characters_from_user
 from allianceauth.services.hooks import get_extension_logger
 
+from wanderer.cache import WandererCache
 from wanderer.managers import WandererManagedMapManager
+from wanderer.utils import validate_wanderer_url
 from wanderer.wanderer import (
     AccessListRoles,
     NotFoundError,
@@ -50,7 +52,9 @@ class WandererManagedMap(models.Model):
         help_text=_("User friendly name for your users to recognize the map"),
     )
     wanderer_url = models.CharField(
-        max_length=120, help_text=_("URL of the wanderer instance")
+        max_length=120,
+        help_text=_("URL of the wanderer instance"),
+        validators=[validate_wanderer_url],
     )
     map_slug = models.CharField(
         max_length=20, help_text=_("Map slug on the wanderer instance")
@@ -96,6 +100,40 @@ class WandererManagedMap(models.Model):
         help_text=_("Factions to whose members this map is available."),
     )
 
+    # Admin Access - users/groups who should have admin role on the ACL
+    admin_users = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="wanderer_admin_maps",
+        help_text=_("Users who should be granted admin role on this map's ACL"),
+    )
+
+    admin_groups = models.ManyToManyField(
+        Group,
+        blank=True,
+        related_name="wanderer_admin_maps",
+        help_text=_(
+            "Groups whose members should be granted admin role on this map's ACL"
+        ),
+    )
+
+    # Manager Access - users/groups who should have manager role on the ACL
+    manager_users = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="wanderer_manager_maps",
+        help_text=_("Users who should be granted manager role on this map's ACL"),
+    )
+
+    manager_groups = models.ManyToManyField(
+        Group,
+        blank=True,
+        related_name="wanderer_manager_maps",
+        help_text=_(
+            "Groups whose members should be granted manager role on this map's ACL"
+        ),
+    )
+
     def __str__(self):
         return f"{self.wanderer_url}/{self.map_slug}"
 
@@ -104,6 +142,10 @@ class WandererManagedMap(models.Model):
             models.UniqueConstraint(
                 fields=["wanderer_url", "map_slug"], name="functional_pk_urlslug"
             )
+        ]
+        indexes = [
+            models.Index(fields=["map_acl_id"], name="wanderer_map_acl_id_idx"),
+            models.Index(fields=["map_slug"], name="wanderer_map_slug_idx"),
         ]
 
     def accessible_by(self, user: User) -> bool:
@@ -209,15 +251,24 @@ class WandererManagedMap(models.Model):
         wanderer_account.delete()
 
     def get_character_ids_on_access_list(self) -> list[int]:
-        """Returns all character_ids present on the access list"""
-        return get_acl_member_ids(
-            self.wanderer_url, self.map_acl_id, self.map_acl_api_key
+        """
+        Returns all character_ids present on the access list.
+
+        Cached for 5 minutes to reduce API calls.
+        """
+        return WandererCache.get_acl_members(
+            self.id,
+            lambda: get_acl_member_ids(
+                self.wanderer_url, self.map_acl_id, self.map_acl_api_key
+            ),
         )
 
-    def add_character_to_acl(self, character_id: int):
-        """Adds a single character to the ACL with the viewer role"""
+    def add_character_to_acl(
+        self, character_id: int, role: AccessListRoles = AccessListRoles.MEMBER
+    ):
+        """Adds a single character to the ACL with specified role (defaults to MEMBER)"""
         return add_character_to_acl(
-            self.wanderer_url, self.map_acl_id, self.map_acl_api_key, character_id
+            self.wanderer_url, self.map_acl_id, self.map_acl_api_key, character_id, role
         )
 
     def remove_member_from_access_list(self, member_id: int):
@@ -242,10 +293,15 @@ class WandererManagedMap(models.Model):
 
     def get_non_member_characters(self) -> list[(int, AccessListRoles)]:
         """
-        Return a list of all character ids and roles that are not set as members
+        Return a list of all character ids and roles that are not set as members.
+
+        Cached for 5 minutes to reduce API calls.
         """
-        return get_non_member_characters(
-            self.wanderer_url, self.map_acl_id, self.map_acl_api_key
+        return WandererCache.get_non_member_chars(
+            self.id,
+            lambda: get_non_member_characters(
+                self.wanderer_url, self.map_acl_id, self.map_acl_api_key
+            ),
         )
 
     def set_character_to_member(self, character_id: int):
@@ -255,6 +311,123 @@ class WandererManagedMap(models.Model):
         set_character_to_member(
             self.wanderer_url, self.map_acl_id, self.map_acl_api_key, character_id
         )
+
+    def _get_role_character_ids(self, users_qs, groups_qs, role_name: str) -> set[int]:
+        """
+        Helper method to collect character IDs from user and group relationships.
+
+        OPTIMIZED: Uses bulk queries to avoid N+1 problem.
+
+        Args:
+            users_qs: QuerySet or related manager for users assigned the role
+            groups_qs: QuerySet or related manager for groups assigned the role
+            role_name: Name of the role (e.g., 'admin', 'manager') for logging
+
+        Returns:
+            Set of character IDs for all characters owned by assigned users
+        """
+        character_ids = set()
+
+        # Get all user IDs from users_qs in a single query
+        user_ids_from_users = list(users_qs.values_list("id", flat=True))
+
+        # Get all user IDs from group members in a single query
+        user_ids_from_groups = list(
+            User.objects.filter(groups__in=groups_qs.all())
+            .distinct()
+            .values_list("id", flat=True)
+        )
+
+        # Combine all user IDs
+        all_user_ids = set(user_ids_from_users) | set(user_ids_from_groups)
+
+        if not all_user_ids:
+            logger.debug(
+                "No users assigned as %s for map '%s'",
+                role_name,
+                self.name,
+            )
+            return character_ids
+
+        # Single query to get ALL characters for ALL users
+        characters = EveCharacter.objects.filter(
+            character_ownership__user_id__in=all_user_ids
+        ).values_list("character_id", "character_ownership__user_id")
+
+        # Track users without characters for logging
+        users_with_chars = set()
+
+        for char_id, user_id in characters:
+            character_ids.add(char_id)
+            users_with_chars.add(user_id)
+
+        # Log warnings for users without characters
+        users_without_chars = all_user_ids - users_with_chars
+        if users_without_chars:
+            # Get usernames in a single query for better logging
+            users_info = User.objects.filter(id__in=users_without_chars).values_list(
+                "id", "username"
+            )
+            for user_id, username in users_info:
+                logger.warning(
+                    "User %s (ID: %d) is assigned as %s for map '%s' but has no characters",
+                    username,
+                    user_id,
+                    role_name,
+                    self.name,
+                )
+
+        logger.debug(
+            "Found %d characters for %d users with %s role on map '%s'",
+            len(character_ids),
+            len(all_user_ids),
+            role_name,
+            self.name,
+        )
+
+        return character_ids
+
+    def get_admin_character_ids(self) -> set[int]:
+        """
+        Returns set of character IDs that should have admin role.
+        Includes ALL characters (main + alts) from admin_users and all users in admin_groups.
+        """
+        return self._get_role_character_ids(
+            self.admin_users, self.admin_groups, "admin"
+        )
+
+    def get_manager_character_ids(self) -> set[int]:
+        """
+        Returns set of character IDs that should have manager role.
+        Includes ALL characters (main + alts) from manager_users and all users in manager_groups.
+        """
+        return self._get_role_character_ids(
+            self.manager_users, self.manager_groups, "manager"
+        )
+
+    def invalidate_acl_cache(self):
+        """Invalidate cached ACL data for this map."""
+        WandererCache.invalidate_acl_cache(self.id)
+
+    def invalidate_user_access_cache(self, user):
+        """Invalidate user access cache for this map."""
+        WandererCache.invalidate_user_access(self.id, user.id)
+
+    def get_character_role(self, character_id: int) -> AccessListRoles:
+        """
+        Determine what role a character should have on the ACL.
+        Returns: AccessListRoles enum value (ADMIN, MANAGER, or MEMBER)
+
+        Priority order: ADMIN > MANAGER > MEMBER
+        """
+        admin_chars = self.get_admin_character_ids()
+        manager_chars = self.get_manager_character_ids()
+
+        if character_id in admin_chars:
+            return AccessListRoles.ADMIN
+        if character_id in manager_chars:
+            return AccessListRoles.MANAGER
+        return AccessListRoles.MEMBER
 
 
 class WandererAccount(models.Model):
