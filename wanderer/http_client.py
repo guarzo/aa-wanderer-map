@@ -32,10 +32,10 @@ class WandererHTTPClient:
         """
         Get a requests Session configured with retry logic.
 
-        Retry configuration:
-        - Total retries: 3
-        - Backoff factor: 0.5 (waits 0.5s, 1s, 2s between retries)
-        - Retry on: 500, 502, 503, 504, 429 status codes
+        Retry configuration (configurable via Django settings):
+        - Total retries: cls.RETRY_TOTAL (WANDERER_API_RETRY_TOTAL, default: 3)
+        - Backoff factor: cls.RETRY_BACKOFF_FACTOR (WANDERER_API_RETRY_BACKOFF, default: 0.5)
+        - Retry on status codes: cls.RETRY_STATUS_CODES (WANDERER_API_RETRY_STATUS_CODES, default: 500, 502, 503, 504, 429)
         - Retry methods: All HTTP methods
 
         Returns:
