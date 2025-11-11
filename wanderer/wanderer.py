@@ -94,7 +94,7 @@ def create_acl_associated_to_map(
         )
         raise ValueError(
             f"Wanderer API returned invalid JSON (status {r.status_code}): {str(e)}"
-        )
+        ) from e
 
     # Validate response structure
     acl_data = payload.get("data")
