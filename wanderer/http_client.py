@@ -83,9 +83,9 @@ class WandererHTTPClient:
         except requests.RequestException as e:
             logger.exception("POST %s failed: %s", url, e)
             raise
-        else:
-            logger.debug("POST %s -> %s", url, response.status_code)
-            return response
+
+        logger.debug("POST %s -> %s", url, response.status_code)
+        return response
 
     @classmethod
     def get(cls, url: str, timeout: int | None = None, **kwargs) -> requests.Response:
@@ -113,9 +113,9 @@ class WandererHTTPClient:
         except requests.RequestException as e:
             logger.exception("GET %s failed: %s", url, e)
             raise
-        else:
-            logger.debug("GET %s -> %s", url, response.status_code)
-            return response
+
+        logger.debug("GET %s -> %s", url, response.status_code)
+        return response
 
     @classmethod
     def put(cls, url: str, timeout: int | None = None, **kwargs) -> requests.Response:
@@ -143,9 +143,9 @@ class WandererHTTPClient:
         except requests.RequestException as e:
             logger.exception("PUT %s failed: %s", url, e)
             raise
-        else:
-            logger.debug("PUT %s -> %s", url, response.status_code)
-            return response
+
+        logger.debug("PUT %s -> %s", url, response.status_code)
+        return response
 
     @classmethod
     def delete(
@@ -175,6 +175,6 @@ class WandererHTTPClient:
         except requests.RequestException as e:
             logger.exception("DELETE %s failed: %s", url, e)
             raise
-        else:
-            logger.debug("DELETE %s -> %s", url, response.status_code)
-            return response
+
+        logger.debug("DELETE %s -> %s", url, response.status_code)
+        return response
