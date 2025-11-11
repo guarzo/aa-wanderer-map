@@ -87,6 +87,15 @@ class WandererManagedMapAdminForm(forms.ModelForm):
                         )
                     ]
                     self.fields["acl_selection"].initial = "__CREATE_NEW__"
+                except ValidationError as exc:
+                    logger.warning("Invalid Wanderer URL: %s", exc)
+                    self.fields["acl_selection"].choices = [
+                        (
+                            "__CREATE_NEW__",
+                            "Create new ACL (unable to fetch existing ACLs - invalid URL)",
+                        )
+                    ]
+                    self.fields["acl_selection"].initial = "__CREATE_NEW__"
             else:
                 # No data yet, show placeholder
                 self.fields["acl_selection"].choices = [

@@ -82,10 +82,51 @@ def create_acl_associated_to_map(
 
     r.raise_for_status()
 
-    payload = r.json()
-    acl_data = payload["data"]
-    acl_id = acl_data["id"]
-    acl_key = acl_data["api_key"]
+    # Parse JSON response
+    try:
+        payload = r.json()
+    except ValueError as e:
+        logger.error(
+            "Failed to parse JSON response from Wanderer API. "
+            "Status: %d, Response: %s",
+            r.status_code,
+            r.text[:500],  # Limit response length for logging
+        )
+        raise ValueError(
+            f"Wanderer API returned invalid JSON (status {r.status_code}): {str(e)}"
+        )
+
+    # Validate response structure
+    acl_data = payload.get("data")
+    if not isinstance(acl_data, dict):
+        logger.error(
+            "Wanderer API response missing 'data' field or invalid format. "
+            "Response: %s",
+            r.text[:500],
+        )
+        raise ValueError(
+            f"Wanderer API returned unexpected response format. "
+            f"Expected 'data' dict, got: {type(acl_data).__name__}"
+        )
+
+    # Extract ACL ID and API key
+    acl_id = acl_data.get("id")
+    acl_key = acl_data.get("api_key")
+
+    if not acl_id:
+        logger.error(
+            "Wanderer API response missing ACL 'id'. Response data: %s",
+            acl_data,
+        )
+        raise ValueError("Wanderer API response missing ACL 'id' field")
+
+    if not acl_key:
+        logger.error(
+            "Wanderer API response missing ACL 'api_key'. Response data: %s",
+            acl_data,
+        )
+        raise ValueError("Wanderer API response missing ACL 'api_key' field")
+
     logger.debug(
         "Successfully created ACL id %s (api_key=%s)",
         acl_id,
@@ -107,10 +148,12 @@ def get_acl_member_ids(wanderer_url: str, acl_id: str, acl_api_key: str) -> list
 
     r = _get_raw_acl_members(wanderer_url, acl_id, acl_api_key)
 
+    data = r.json()
+    members = data.get("data", {}).get("members", [])
     return [
         int(member["eve_character_id"])
-        for member in r.json()["data"]["members"]
-        if member["eve_character_id"]
+        for member in members
+        if member.get("eve_character_id")
     ]
 
 
@@ -201,10 +244,12 @@ def get_non_member_characters(
 
     r = _get_raw_acl_members(wanderer_url, acl_id, acl_api_key)
 
+    data = r.json()
+    members = data.get("data", {}).get("members", [])
     return [
         (int(member["eve_character_id"]), AccessListRoles(member["role"]))
-        for member in r.json()["data"]["members"]
-        if member["role"] != "member" and member["eve_character_id"]
+        for member in members
+        if member.get("role") != "member" and member.get("eve_character_id")
     ]
 
 
@@ -229,7 +274,7 @@ def set_character_to_member(
         headers={"Authorization": f"Bearer {acl_api_key}"},
         json={
             "member": {
-                "role": "member",
+                "role": AccessListRoles.MEMBER.value,
             }
         },
     )
