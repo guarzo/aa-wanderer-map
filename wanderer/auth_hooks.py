@@ -98,7 +98,22 @@ def add_del_callback(*args, **kwargs):
     # Loop all services and look for our specific hook classes
     hooks_to_remove = []
     for h in hooks._hooks.get("services_hook", []):
-        instance = h()  # Create instance to check type and access attributes
+        try:
+            instance = h()  # Create instance to check type and access attributes
+        except BaseException as e:
+            # Re-raise system exceptions (KeyboardInterrupt, SystemExit, etc.)
+            if not isinstance(e, Exception):
+                raise
+            # Log the error but continue processing other hooks
+            logger.error(
+                "Failed to instantiate hook %s: %s - %s. Skipping this hook.",
+                h.__name__ if hasattr(h, "__name__") else repr(h),
+                type(e).__name__,
+                str(e),
+                exc_info=True,
+            )
+            continue
+
         if isinstance(instance, WandererManagedMapService):
             # This is our hook
             # instance is an instanced WandererManagedMapService hook with a wanderermap
