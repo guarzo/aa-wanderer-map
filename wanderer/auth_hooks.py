@@ -96,16 +96,22 @@ def add_del_callback(*args, **kwargs):
     logger.info(f"Processing Maps {map_add}")
 
     # Loop all services and look for our specific hook classes
+    hooks_to_remove = []
     for h in hooks._hooks.get("services_hook", []):
-        if isinstance(h(), WandererManagedMapService):
+        instance = h()  # Create instance to check type and access attributes
+        if isinstance(instance, WandererManagedMapService):
             # This is our hook
-            # h is an instanced WandererManagedMapService hook with a wanderermap
-            if h.managed_map in map_add:
+            # instance is an instanced WandererManagedMapService hook with a wanderermap
+            if instance.managed_map in map_add:
                 # this is a known map so remove it from our list of knowns
-                map_add.remove(h.managed_map)
+                map_add.remove(instance.managed_map)
             else:
-                # This one was deleted remove the hook.
-                del h
+                # This one was deleted, mark for removal
+                hooks_to_remove.append(h)
+
+    # Remove hooks that are no longer needed
+    for h in hooks_to_remove:
+        hooks._hooks["services_hook"].remove(h)
 
     # Loop to setup what is missing ( or everything on first boot )
     for map in map_add:
