@@ -47,6 +47,7 @@ def add_alts_to_map(wanderer_user_id: int, wanderer_managed_map_id: int):
     logger.debug(missing_characters_set)
 
     # Add missing characters with appropriate roles
+    failed_characters = []
     for missing_character_id in missing_characters_set:
         # Determine the role this character should have
         role = wanderer_managed_map.get_character_role(missing_character_id)
@@ -56,7 +57,27 @@ def add_alts_to_map(wanderer_user_id: int, wanderer_managed_map_id: int):
             role.value,
         )
         # Add with the determined role
-        wanderer_managed_map.add_character_to_acl(missing_character_id, role=role)
+        try:
+            wanderer_managed_map.add_character_to_acl(missing_character_id, role=role)
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Log error but continue with other characters
+            # Broad exception is intentional - we want to process all characters
+            # even if one encounters an unexpected error (timeout, rate limit, etc.)
+            logger.exception(
+                "Failed to add character %d to map '%s', continuing with others",
+                missing_character_id,
+                wanderer_managed_map.name,
+            )
+            failed_characters.append(missing_character_id)
+            continue
+
+    if failed_characters:
+        logger.warning(
+            "Failed to add %d characters to map '%s': %s",
+            len(failed_characters),
+            wanderer_managed_map.name,
+            failed_characters,
+        )
 
     # Invalidate cache after modifications
     wanderer_managed_map.invalidate_acl_cache()
